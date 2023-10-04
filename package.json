@@ -1,0 +1,12 @@
+{
+  "name": "google-drive-tests",
+  "packageManager": "yarn@3.6.0",
+  "type": "module",
+  "main": "src/index.js",
+  "dependencies": {
+    "@google-cloud/local-auth": "2.1.0",
+    "googleapis": "105",
+    "moment": "^2.29.4",
+    "uuidv4": "^6.2.13"
+  }
+}
