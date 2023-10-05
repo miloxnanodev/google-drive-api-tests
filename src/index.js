@@ -22,6 +22,7 @@ const SCOPES = [
   "https://www.googleapis.com/auth/drive.readonly",
   "https://www.googleapis.com/auth/drive.activity",
   "https://www.googleapis.com/auth/drive.activity.readonly",
+  "https://www.googleapis.com/auth/userinfo.email",
 ];
 
 const TOKEN_PATH = path.join(__dirname, "assets/token.json");
@@ -136,6 +137,7 @@ async function watchFileChanges(authClient, fileId, hookUrl) {
       id: uuidv4(),
       type: "web_hook",
       address: hookUrl,
+      expiration: moment().add(1, "day").unix() * 1000,
     },
     supportsAllDrives: true,
   });
@@ -161,6 +163,50 @@ async function watchChangesAndNotify(authClient, driveId, hookUrl) {
   console.log(res.data);
 }
 
+async function getChangesFromMessageNumber(authClient, driveId, messageNumber) {
+  const drive = google.drive({ version: "v3", auth: authClient });
+  const res = await drive.changes.list({
+    driveId,
+    pageToken: messageNumber,
+    supportsAllDrives: true,
+    includeItemsFromAllDrives: true,
+  });
+  console.log(res.data);
+}
+
+async function getDriveActivityWithin5Minutes(authClient, driveId) {
+  const drive = google.driveactivity({ version: "v2", auth: authClient });
+  const res = await drive.activity.query({
+    requestBody: {
+      ancestorName: `items/${driveId}`,
+      consolidationStrategy: {
+        legacy: {},
+      },
+      pageSize: 1,
+      filter: `time > \"${moment().subtract(20, "minutes").toISOString()}\"`,
+    },
+  });
+  console.log(JSON.stringify(res.data.activities[0]));
+}
+
+async function getPrimaryMailAddressFromPeoplesId(authClient, peoplesId) {
+  const people = google.people({ version: "v1", auth: authClient });
+  const res = await people.people.get({
+    resourceName: peoplesId,
+    personFields: "emailAddresses",
+  });
+  const emailAddresses = res.data.emailAddresses;
+  if (!emailAddresses) {
+    console.log("No email addresses found.");
+    return;
+  }
+  if (emailAddresses.length === 0) {
+    console.log("No email addresses found.");
+    return;
+  }
+  console.log(emailAddresses[0].value);
+}
+
 function main() {
   console.log("A quick Google Drive API v3 test");
   console.log("================================");
@@ -170,6 +216,9 @@ function main() {
   console.log("  - listFileParents <fileId>");
   console.log("  - watchFileChanges <fileId> <hookUrl>");
   console.log("  - watchChangesAndNotify <driveId> <hookUrl>");
+  console.log("  - getChangesFromMessageNumber <driveId> <messageNumber>");
+  console.log("  - getDriveActivityWithin5Minutes <driveId>");
+  console.log("  - getPrimaryMailAddressFromPeoplesId <peoplesId>");
   console.log("================================");
   console.log("Usage : ");
   console.log("  node src/index.js <command> <args>");
@@ -204,6 +253,21 @@ function main() {
     case "watchChangesAndNotify":
       authorize()
         .then((auth) => watchChangesAndNotify(auth, arg1, arg2))
+        .catch((err) => console.error(err) && process.exit(1));
+      break;
+    case "getChangesFromMessageNumber":
+      authorize()
+        .then((auth) => getChangesFromMessageNumber(auth, arg1, arg2))
+        .catch((err) => console.error(err) && process.exit(1));
+      break;
+    case "getDriveActivityWithin5Minutes":
+      authorize()
+        .then((auth) => getDriveActivityWithin5Minutes(auth, arg1))
+        .catch((err) => console.error(err) && process.exit(1));
+      break;
+    case "getPrimaryMailAddressFromPeoplesId":
+      authorize()
+        .then((auth) => getPrimaryMailAddressFromPeoplesId(auth, arg1))
         .catch((err) => console.error(err) && process.exit(1));
       break;
     default:

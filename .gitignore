@@ -8,6 +8,12 @@ node_modules
 package-lock.json
 **/**/credentials.json
 **/**/token.json
+**/**/node_modules
+**/**/typings
+**/**/dist
+**/**/lib
+**/**/*.log
+**/**/yarn.lock
 
 # Swap the comments on the following lines if you don't wish to use zero-installs
 # Documentation here: https://yarnpkg.com/features/zero-installs
